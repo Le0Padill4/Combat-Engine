@@ -1,7 +1,9 @@
 # Estado — Combat-Engine
 
-Revisión inicial: 24 nov 2026. Repo renombrado desde `Proyecto_Final`; público, rama remota `main`, ocho commits preservados. Respaldo espejo previo: `backups/Combat-Engine-pre-rename-20261124.git`; clon local sin cambios antes del renombrado y remoto `origin` actualizado a `Le0Padill4/Combat-Engine`. Dominio Vercel devolvió HTTP 200 tras renombrar; todavía no se ha verificado el repo conectado en Vercel.
+Revisión inicial: 24 nov 2026. Repo renombrado desde `Proyecto_Final`; público, rama remota `main`, ocho commits preservados. Respaldo espejo previo: `backups/Combat-Engine-pre-rename-20261124.git`; clon local sin cambios antes del renombrado y remoto `origin` actualizado a `Le0Padill4/Combat-Engine`. El dominio actual responde HTTP 200 y los PRs generaron previews Vercel.
 
-Hallazgos: `main.cpp` incluye `clase.h`, ausente del árbol; no se ejecutó compilación. Existe `juego.exe` rastreado. Pruebas existentes: `tests/battle-contract.test.js`, `tests/vercel-api.test.js`; no se ejecutaron en esta fase. No se encontró workflow CI ni pruebas del C++ en el audit inicial. No se removió funcionalidad.
+Hallazgos iniciales: `main.cpp` incluía `clase.h`, ausente del árbol; nombres de archivo con `ç` fallaban en MSVC. PR #6 elimina la inclusión obsoleta, renombra archivos a ASCII y fija UTF-8. CI pasó en Ubuntu, macOS y Windows tras la corrección. En esta máquina no está instalado CMake; la compilación local no se ejecutó.
 
-Trabajo del motor CMP3002, invariantes, referencia lenta, pruebas diferenciales, benchmarks, informe y ZIP: pendiente. Equipo autorizado por usuario como trío; aprobación del curso no constatada.
+Las 7 pruebas Node existentes pasaron localmente. No hay pruebas unitarias C++ todavía. El archivo `juego.exe` sigue rastreado. No se removió funcionalidad. PR #1 contiene esta documentación; PR #6 contiene baseline/CI. Ambos esperan revisión de un integrante.
+
+Motor académico, invariantes, referencia lenta, comparación aleatoria, benchmarks, informe y ZIP: pendientes. El usuario autorizó el trío; la guía CMP3002 indica parejas, por lo que la aceptación del curso aún debe confirmarse.

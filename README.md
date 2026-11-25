@@ -4,7 +4,7 @@ Motor académico de un juego de combate por turnos en C++17, conservando el proy
 
 ## Estado
 
-La rama principal conserva la historia del repositorio anterior. El audit inicial encontró un `#include "clase.h"` inexistente en `src/main.cpp`; por tanto, el build C++ necesita una corrección y verificación antes de declarar que compila. Hay pruebas Node para contratos visuales/API, pero no pruebas del motor C++ ni workflow de CI en la revisión inicial.
+La historia del repositorio anterior se conserva. El audit inicial encontró un `#include "clase.h"` inexistente y una ruta de archivo con `ç` que falla en MSVC. Un PR de corrección los resuelve y su CI pasó en Ubuntu, macOS y Windows; está pendiente de aprobación y merge. Existen pruebas Node para contratos visuales/API, no pruebas unitarias del motor C++ todavía.
 
 ## Compilar y ejecutar
 
