@@ -1,5 +1,4 @@
 #include "personaje.h"
-#include "clase.h"
 #include "Sexitar.h"
 #include "leo1.h"
 #include "leo2.h"

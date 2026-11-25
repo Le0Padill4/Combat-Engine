@@ -1,0 +1,26 @@
+name: validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure C++ project
+        run: cmake -S . -B build
+      - name: Build C++17 game
+        run: cmake --build build --config Release
+      - name: Run Node contract tests
+        run: node --test tests/battle-contract.test.js tests/vercel-api.test.js
