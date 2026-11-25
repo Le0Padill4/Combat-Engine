@@ -2,7 +2,7 @@
 #include "Sexitar.h"
 #include "leo1.h"
 #include "leo2.h"
-#include "François.h"
+#include "Francois.h"
 #include "seleccion_personajes.h"
 #include <iostream>
 #include <limits>
