@@ -7,7 +7,7 @@ add_executable(juego
     src/seleccion_personajes.cpp
     src/personajes/personaje.cpp
     src/personajes/Sexitar.cpp
-    src/personajes/François.cpp
+    src/personajes/Francois.cpp
     src/personajes/leo1.cpp
     src/personajes/leo2.cpp
 )
@@ -15,6 +15,10 @@ add_executable(juego
 target_compile_features(juego PRIVATE cxx_std_17)
 target_include_directories(juego PRIVATE src/headers)
 target_compile_definitions(juego PRIVATE PROYECTO_PUBLIC_DIR="${CMAKE_SOURCE_DIR}/public")
+
+if(MSVC)
+    target_compile_options(juego PRIVATE /utf-8)
+endif()
 
 if(WIN32)
     target_link_libraries(juego PRIVATE ws2_32)

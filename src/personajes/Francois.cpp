@@ -1,4 +1,4 @@
-#include "François.h"
+#include "Francois.h"
 #include <iostream>
 // Constructor de la clase François, que hereda de Personaje (nombre, hpmax, kimax, ataque, defensa)
 François::François(const std::string& nombreInicial) : Personaje(nombreInicial, 150, 150, 22, 16) {

@@ -68,7 +68,7 @@ test("el resolvedor respeta exacta, palabra clave y fallback", () => {
 });
 
 test("los ataques configurados coinciden con los declarados por los personajes C++", () => {
-    const sources = ["Sexitar.cpp", "François.cpp", "leo1.cpp", "leo2.cpp"]
+    const sources = ["Sexitar.cpp", "Francois.cpp", "leo1.cpp", "leo2.cpp"]
         .map((name) => fs.readFileSync(path.join(root, "src/personajes", name), "utf8"))
         .join("\n");
     const declared = [...sources.matchAll(/nataque(?:_especial)?\s*=\s*"([^"]+)"/g)]
