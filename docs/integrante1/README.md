@@ -5,6 +5,10 @@ Estado al 26 de noviembre de 2026: implementacion aislada en
 commit, push y PR en borrador para revision. La publicacion no supone integrar
 el modulo ni aprobar el contrato del equipo.
 
+Avance publicado en el [PR #9](https://github.com/Le0Padill4/Combat-Engine/pull/9).
+El CI propio del commit de implementacion `f22e173` paso CMake/CTest y las pruebas
+Node en Ubuntu, macOS y Windows; consultar los checks para el ultimo commit.
+
 ## Alcance y acuerdos pendientes
 
 Este modulo aporta definiciones de personajes, registro por ID, consulta por ID,

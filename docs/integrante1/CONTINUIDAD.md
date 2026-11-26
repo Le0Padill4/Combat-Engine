@@ -1,8 +1,9 @@
 # Continuidad del integrante 1
 
 Actualizado: 26 de noviembre de 2026. El usuario autorizo crear commit, subir
-la rama y abrir un PR en borrador. Este avance se presenta para revision;
-la integracion en main y la aprobacion del contrato siguen pendientes.
+la rama y abrir un PR en borrador. Publicado como
+[PR #9](https://github.com/Le0Padill4/Combat-Engine/pull/9), commit de implementacion
+`f22e173`. La integracion en main y la aprobacion del contrato siguen pendientes.
 
 ## Base y coordinacion
 
@@ -14,6 +15,10 @@ la integracion en main y la aprobacion del contrato siguen pendientes.
 - La consulta del 26 de noviembre encontro tambien los PRs en borrador #7 y #8
   del integrante 2. Sus archivos de combate no se incorporaron ni modificaron.
 - El CI remoto satisfactorio del PR #6 pertenece a ese PR, no a esta rama local.
+- El [workflow propio, ejecucion 45853880949](https://github.com/Le0Padill4/Combat-Engine/actions/runs/45853880949)
+  paso en Ubuntu, macOS y Windows para el commit `f22e173`: configuracion CMake,
+  compilacion de pruebas y benchmark, CTest y siete pruebas Node. No ejecuto
+  las mediciones del benchmark en CI ni valido el juego completo.
 - No se editaron archivos existentes, contratos compartidos o trabajo ajeno.
   La continuidad individual evita conflictos sobre `docs/ESTADO_PROYECTO.md`.
 
@@ -82,14 +87,15 @@ no representa altas aleatorias. No se ha medido una segunda operacion del motor.
 
 ## Pendientes y siguiente paso
 
-- Publicar mediante la autorizacion expresa del 26 de noviembre. Descripcion
-  revisable del PR en borrador: `PR_PROPUESTO.md`. No integrar en main.
+- Solicitar revision cruzada del PR #9 con los integrantes adecuados una vez
+  confirmadas sus identidades; no se inventaron revisores. No integrar en main.
 - Revision cruzada del contrato con integrantes 2/3 y acuerdo de cambios
   compartidos. Usar este contrato como propuesta, no presentarlo como aprobado.
 - Integracion de PRs #1 y #6 por el equipo; el juego en `main` todavia tiene el
   include obsoleto. No corregirlo otra vez desde esta rama.
 - La ruta CMake no se ejecuto localmente; comprobar el resultado de CMake/CTest
-  en el workflow propio del PR antes de integrar. No atribuirle el CI de otro PR.
+  del ultimo commit antes de integrar. La implementacion `f22e173` ya paso la
+  matriz remota de tres sistemas; no atribuirle el CI de otro PR.
 - Cerrar operaciones contables, tercer escenario global, segunda estructura
   propia, mantenimiento de indices y benchmark de la otra operacion.
 - Comparacion diferencial del motor completo, informe colectivo, ZIP y defensa.

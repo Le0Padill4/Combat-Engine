@@ -3,6 +3,8 @@
 Descripcion preparada para el PR en borrador. El usuario autorizo el 26 de
 noviembre de 2026 el commit, push y publicacion para revision, sin merge.
 
+Publicado: https://github.com/Le0Padill4/Combat-Engine/pull/9.
+
 Titulo propuesto: `[I1] Add isolated character registry, custom hash and reproducible evidence`
 
 Rama: `feat/i1-registro-personajes`. Base prevista: `main`, a revisar contra el
@@ -32,7 +34,8 @@ para revision de contratos; no se conecta aun con combate, ranking ni frontend.
   cinco repeticiones; CSV y graficos reproducibles.
 - [x] Workflow individual de CMake/CTest y regresiones Node en tres sistemas.
 - [ ] Contrato revisado por integrantes 2/3.
-- [ ] Build CMake/CTest y CI de esta rama.
+- [x] Build CMake/CTest y pruebas Node de `f22e173` en Ubuntu, macOS y Windows
+  (ejecucion remota 45853880949). Verificar siempre los checks del ultimo commit.
 - [ ] Integracion del motor completo y validacion academica colectiva.
 
 Comandos realmente ejecutados:
