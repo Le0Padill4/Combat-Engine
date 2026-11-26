@@ -21,3 +21,16 @@ Prueba local C++17:
 c++ -std=c++17 -Wall -Wextra -Werror -Isrc/headers -Isrc/combat tests/i2/test_combate.cpp src/combat/combate.cpp src/combat/turno.cpp src/personajes/personaje.cpp -o /tmp/combat-i2-secuencia
 /tmp/combat-i2-secuencia
 ```
+
+Además, `tests/i2/test_turno_diferencial.cpp` ejecuta 10.000 acciones
+sintéticas independientes de `Personaje` base con semilla fija y compara los
+cambios con un oráculo aritmético. Comando ejecutado:
+
+```
+c++ -std=c++17 -Wall -Wextra -Werror -Isrc/headers -Isrc/combat tests/i2/test_turno_diferencial.cpp src/combat/turno.cpp src/personajes/personaje.cpp -o /tmp/combat-i2-diferencial
+/tmp/combat-i2-diferencial
+```
+
+Resultado: 10.000 coincidencias. No prueba personajes derivados, secuencias de
+operaciones del motor completo, ranking ni rendimiento; no reemplaza la prueba
+exigida por CMP3002 para el motor completo.
