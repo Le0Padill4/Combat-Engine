@@ -26,3 +26,12 @@ con el juego completo ni CMake/CI, el contrato de I1/I3, prioridad, efectos,
 selección de rival, referencia lenta o benchmark. `main` mantiene un include
 faltante; su reparación está en el PR #6. Solicitar revisión antes de cambiar el
 comportamiento o conectarlo a la consola.
+
+## Continuidad del 25 de noviembre
+
+Se añadió un CMake aislado para la prueba de turno y CI en Ubuntu, macOS y
+Windows; los tres trabajos pasaron en el commit 67b8703. También pasó la
+compilación C++17 directa en macOS. CMake no está disponible localmente. Se
+solicitó revisión a I1 e I3; el PR #7 sigue en borrador. Los checks obligatorios
+del build principal dependen del PR #6, aún sin integrar. El PR #8 conserva su
+base en #7 hasta que este se integre y se pueda actualizar con seguridad.
