@@ -1,4 +1,5 @@
 #include "turno.h"
+#include "leo1.h"
 #include <cassert>
 
 int main() {
@@ -22,5 +23,19 @@ int main() {
     assert(aplicarTurno(a, a, AccionCombate::normal).estado == EstadoTurno::mismo_personaje);
     b.setHp(0);
     assert(aplicarTurno(a, b, AccionCombate::normal).estado == EstadoTurno::combate_terminado);
+
+    Leo1 personaje("Sintetico");
+    Personaje objetivo("Objetivo", 100, 30, 20, 8);
+    personaje.setKi(25);
+    Personaje& polimorfico = personaje;
+    r = aplicarTurno(polimorfico, objetivo, AccionCombate::especial);
+    assert(r.estado == EstadoTurno::ejecutado && !r.especial_sin_ki);
+    assert(objetivo.getHp() == 68 && personaje.getKi() == 0);
+
+    Personaje debil("Debil", 10, 30, 1, 0);
+    Personaje protegido("Protegido", 10, 30, 1, 100);
+    protegido.setdefiende(true);
+    aplicarTurno(debil, protegido, AccionCombate::normal);
+    assert(protegido.getHp() == 10);  // 1 / 2 = 0 con división entera.
     return 0;
 }

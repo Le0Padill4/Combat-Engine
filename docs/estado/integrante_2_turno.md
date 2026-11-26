@@ -17,7 +17,7 @@ combate terminado es una condición nueva propuesta para la API; necesita revisi
 Verificación local (macOS, compilador C++ disponible):
 
 ```
-c++ -std=c++17 -Wall -Wextra -Werror -Isrc/headers -Isrc/combat tests/i2/test_turno.cpp src/combat/turno.cpp src/personajes/personaje.cpp -o /tmp/combat-i2-test
+c++ -std=c++17 -Wall -Wextra -Werror -Isrc/headers -Isrc/combat tests/i2/test_turno.cpp src/combat/turno.cpp src/personajes/personaje.cpp src/personajes/leo1.cpp -o /tmp/combat-i2-test
 /tmp/combat-i2-test
 ```
 
