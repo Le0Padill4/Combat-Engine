@@ -1,0 +1,26 @@
+name: I2 combat tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'feat/i2-reglas-combate'
+
+permissions:
+  contents: read
+
+jobs:
+  i2-combat:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure isolated tests
+        run: cmake -S tests/i2 -B build-i2 -DCMAKE_BUILD_TYPE=Debug
+      - name: Build isolated tests
+        run: cmake --build build-i2 --config Debug
+      - name: Run isolated tests
+        run: ctest --test-dir build-i2 -C Debug --output-on-failure
