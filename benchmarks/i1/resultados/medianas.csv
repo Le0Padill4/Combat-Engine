@@ -1,0 +1,17 @@
+"candidato","escenario","n","ns_por_consulta"
+"hash","popular_90_por_ciento",1000,49.683
+"vector_ordenado","popular_90_por_ciento",1000,135.528
+"hash","uniforme_80_aciertos",1000,54.003
+"vector_ordenado","uniforme_80_aciertos",1000,131.685
+"hash","popular_90_por_ciento",4000,50.685
+"vector_ordenado","popular_90_por_ciento",4000,134.549
+"hash","uniforme_80_aciertos",4000,58.016
+"vector_ordenado","uniforme_80_aciertos",4000,151.914
+"hash","popular_90_por_ciento",16000,60.509
+"vector_ordenado","popular_90_por_ciento",16000,155.668
+"hash","uniforme_80_aciertos",16000,78.49
+"vector_ordenado","uniforme_80_aciertos",16000,183.999
+"hash","popular_90_por_ciento",64000,73.006
+"vector_ordenado","popular_90_por_ciento",64000,181.102
+"hash","uniforme_80_aciertos",64000,176.068
+"vector_ordenado","uniforme_80_aciertos",64000,287.54

@@ -1,0 +1,28 @@
+name: I1 registry tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'feat/i1-registro-personajes'
+
+permissions:
+  contents: read
+
+jobs:
+  i1-registro:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure isolated registry tests
+        run: cmake -S tests/i1 -B build/i1-ci -DCMAKE_BUILD_TYPE=Release
+      - name: Build isolated registry tests and benchmark
+        run: cmake --build build/i1-ci --config Release
+      - name: Run isolated registry tests
+        run: ctest --test-dir build/i1-ci -C Release --output-on-failure
+      - name: Run existing Node contract tests
+        run: node --test tests/battle-contract.test.js tests/vercel-api.test.js
