@@ -1,0 +1,18 @@
+cmake_minimum_required(VERSION 3.16)
+project(CombatEngineIntegrante1 LANGUAGES CXX)
+
+# Standalone until the team agrees on changes to the shared root CMakeLists.
+get_filename_component(COMBAT_ROOT "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
+add_executable(i1_registro_tests registro_tests.cpp "${COMBAT_ROOT}/src/personajes/personaje.cpp")
+add_executable(i1_registro_benchmark "${COMBAT_ROOT}/benchmarks/i1/registro_benchmark.cpp")
+foreach(target IN ITEMS i1_registro_tests i1_registro_benchmark)
+    target_compile_features(${target} PRIVATE cxx_std_17)
+    target_include_directories(${target} PRIVATE "${COMBAT_ROOT}/src/headers")
+    if(MSVC)
+        target_compile_options(${target} PRIVATE /W4 /WX /utf-8)
+    else()
+        target_compile_options(${target} PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    endif()
+endforeach()
+enable_testing()
+add_test(NAME i1_registro COMMAND i1_registro_tests)

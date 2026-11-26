@@ -1,0 +1,11 @@
+Alcance: registro del integrante 1; no motor completo
+Compilador: g++.exe (tdm64-1) 9.2.0
+Flags: -std=c++17 -O2 -Wall -Wextra -Wpedantic -Werror -Isrc/headers
+OS: Windows_NT 10.0.26300 x64
+Procesador: 12th Gen Intel(R) Core(TM) i7-1255U
+Node: v24.20.0
+Repeticiones: 5
+Semilla base: 20261125
+Generador: std::mt19937; semilla efectiva = base + n + indice de escenario
+Generacion de fixtures, validacion y graficacion fuera del intervalo de consultas
+R: Rscript (R) version 4.6.1 (2026-06-24)
