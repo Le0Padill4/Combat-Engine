@@ -1,0 +1,10 @@
+fecha_inicio: 2026-11-27T22:51:30
+modo: completo
+sistema: Linux-6.18.44-fc-v880-x86_64-with-glibc2.39
+cpu: Intel(R) Xeon(R) Processor @ 2.10GHz
+nucleos_logicos: 2
+compilador: c++ (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0
+flags: -std=c++17 -O2
+python: 3.13.18
+matplotlib: 3.11.2
+nota: todas las filas del CSV se midieron en este mismo computador, en una sola ejecucion.
