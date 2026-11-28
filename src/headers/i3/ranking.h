@@ -25,7 +25,6 @@
 
 #include <algorithm>
 #include <cstddef>
-#include <numeric>
 #include <optional>
 #include <stdexcept>
 #include <string>
@@ -34,6 +33,12 @@
 namespace combat::i3 {
 
 namespace detalle {
+// Clave inline (puntos, slot): evita leer puntos[slot] por indireccion al comparar.
+struct Clave {
+    Puntos puntos;
+    std::size_t slot;
+};
+
 // Almacen comun por slot que usan los tres candidatos.
 struct Almacen {
     std::vector<std::string> ids;
@@ -52,6 +57,11 @@ struct Almacen {
     }
     bool antes(std::size_t a, std::size_t b) const {
         return antes_en_ranking(puntos[a], ids[a], puntos[b], ids[b]);
+    }
+    // Mismo orden que antes(); solo consulta el id cuando los puntos empatan.
+    bool antes_clave(const Clave& x, const Clave& y) const {
+        if (x.puntos != y.puntos) return x.puntos > y.puntos;
+        return ids[x.slot] < ids[y.slot];
     }
     std::size_t bytes() const {
         std::size_t b = ids.capacity() * sizeof(std::string) + puntos.capacity() * sizeof(Puntos);
@@ -122,23 +132,25 @@ public:
     }
     void fijar_puntos(std::size_t slot, Puntos nuevos) { a_.puntos[slot] = nuevos; }
 
-    // O(n + k log n): heapify de los slots y k extracciones.
+    // O(n + k log n): heapify de las claves (puntos, slot) y k extracciones.
     std::vector<EntradaRanking> top_k(std::size_t k) const {
         const std::size_t n = tamano();
         const std::size_t cuantos = std::min(k, n);
         std::vector<EntradaRanking> out;
         if (cuantos == 0) return out;
-        std::vector<std::size_t> heap(n);
-        std::iota(heap.begin(), heap.end(), std::size_t{0});
+        std::vector<detalle::Clave> heap(n);
+        for (std::size_t i = 0; i < n; ++i) heap[i] = {a_.puntos[i], i};
         // make_heap deja en el frente el "mayor" segun cmp; "mayor" = mejor rankeado.
-        const auto cmp = [this](std::size_t x, std::size_t y) { return a_.antes(y, x); };
+        const auto cmp = [this](const detalle::Clave& x, const detalle::Clave& y) {
+            return a_.antes_clave(y, x);
+        };
         std::make_heap(heap.begin(), heap.end(), cmp);
         out.reserve(cuantos);
         auto fin = heap.end();
         for (std::size_t i = 0; i < cuantos; ++i) {
             std::pop_heap(heap.begin(), fin, cmp);
             --fin;
-            out.push_back({i + 1, a_.ids[*fin], a_.puntos[*fin]});
+            out.push_back({i + 1, a_.ids[fin->slot], fin->puntos});
         }
         return out;
     }
@@ -155,18 +167,20 @@ public:
 };
 
 // ------------------------------------------------------------ Arreglo ordenado
-// Invariante: orden_ es una permutacion de 0..n-1 ordenada estrictamente por
-// antes_en_ranking segun los puntos actuales.
+// Invariante: orden_ contiene una clave (puntos, slot) por luchador, la clave
+// guarda los puntos actuales de ese slot y el arreglo esta ordenado
+// estrictamente segun antes_clave (puntos desc, id asc).
 class RankingArreglo {
+    using Clave = detalle::Clave;
     detalle::Almacen a_;
-    std::vector<std::size_t> orden_;
+    std::vector<Clave> orden_;
 
-    // Primer indice cuyo elemento NO va antes que `slot` (slot puede no estar en orden_).
-    std::size_t limite_inferior(std::size_t slot, std::size_t desde, std::size_t hasta) const {
+    // Primer indice de [desde, hasta) cuyo elemento NO va antes que `k`.
+    std::size_t limite_inferior(const Clave& k, std::size_t desde, std::size_t hasta) const {
         const auto it = std::lower_bound(
             orden_.begin() + static_cast<std::ptrdiff_t>(desde),
-            orden_.begin() + static_cast<std::ptrdiff_t>(hasta), slot,
-            [this](std::size_t x, std::size_t s) { return a_.antes(x, s); });
+            orden_.begin() + static_cast<std::ptrdiff_t>(hasta), k,
+            [this](const Clave& x, const Clave& y) { return a_.antes_clave(x, y); });
         return static_cast<std::size_t>(it - orden_.begin());
     }
 
@@ -177,32 +191,35 @@ public:
     // O(n): inserta en su posicion ordenada (el registro de luchadores es raro).
     void agregar(std::size_t slot, const std::string& id) {
         a_.agregar(slot, id);
-        const std::size_t idx = limite_inferior(slot, 0, orden_.size());
-        orden_.insert(orden_.begin() + static_cast<std::ptrdiff_t>(idx), slot);
+        const Clave k{0, slot};
+        const std::size_t idx = limite_inferior(k, 0, orden_.size());
+        orden_.insert(orden_.begin() + static_cast<std::ptrdiff_t>(idx), k);
     }
     void cargar(const std::vector<std::string>& ids_in, const std::vector<Puntos>& puntos_in) {
         a_.cargar(ids_in, puntos_in);
         orden_.resize(ids_in.size());
-        std::iota(orden_.begin(), orden_.end(), std::size_t{0});
+        for (std::size_t i = 0; i < ids_in.size(); ++i) orden_[i] = {puntos_in[i], i};
         std::sort(orden_.begin(), orden_.end(),
-                  [this](std::size_t x, std::size_t y) { return a_.antes(x, y); });
+                  [this](const Clave& x, const Clave& y) { return a_.antes_clave(x, y); });
     }
-    // O(log n) para localizar + O(|distancia|) para mover el slot con rotate.
+    // O(log n) para localizar + O(|distancia|) para mover la clave con rotate.
     void fijar_puntos(std::size_t slot, Puntos nuevos) {
         if (a_.puntos[slot] == nuevos) return;
-        const std::size_t p = limite_inferior(slot, 0, orden_.size());  // con puntos viejos
+        const std::size_t p = limite_inferior(Clave{a_.puntos[slot], slot}, 0, orden_.size());
         a_.puntos[slot] = nuevos;
+        orden_[p].puntos = nuevos;
+        const Clave k{nuevos, slot};
         const std::size_t n = orden_.size();
         const auto b = orden_.begin();
-        if (p > 0 && a_.antes(slot, orden_[p - 1])) {
-            const std::size_t q = limite_inferior(slot, 0, p);
+        if (p > 0 && a_.antes_clave(k, orden_[p - 1])) {
+            const std::size_t q = limite_inferior(k, 0, p);
             std::rotate(b + static_cast<std::ptrdiff_t>(q), b + static_cast<std::ptrdiff_t>(p),
                         b + static_cast<std::ptrdiff_t>(p) + 1);
-        } else if (p + 1 < n && a_.antes(orden_[p + 1], slot)) {
-            // primer elemento posterior a p que va despues de slot
+        } else if (p + 1 < n && a_.antes_clave(orden_[p + 1], k)) {
+            // primer elemento posterior a p que va despues de k
             const auto it = std::lower_bound(
-                b + static_cast<std::ptrdiff_t>(p) + 1, orden_.end(), slot,
-                [this](std::size_t x, std::size_t s) { return a_.antes(x, s); });
+                b + static_cast<std::ptrdiff_t>(p) + 1, orden_.end(), k,
+                [this](const Clave& x, const Clave& y) { return a_.antes_clave(x, y); });
             std::rotate(b + static_cast<std::ptrdiff_t>(p), b + static_cast<std::ptrdiff_t>(p) + 1,
                         it);
         }
@@ -212,25 +229,27 @@ public:
         std::vector<EntradaRanking> out;
         out.reserve(cuantos);
         for (std::size_t i = 0; i < cuantos; ++i)
-            out.push_back({i + 1, a_.ids[orden_[i]], a_.puntos[orden_[i]]});
+            out.push_back({i + 1, a_.ids[orden_[i].slot], orden_[i].puntos});
         return out;
     }
     std::optional<std::size_t> posicion(std::size_t slot) const {
         if (slot >= tamano()) return std::nullopt;
-        return limite_inferior(slot, 0, orden_.size()) + 1;
+        return limite_inferior(Clave{a_.puntos[slot], slot}, 0, orden_.size()) + 1;
     }
     bool verificar_invariantes() const {
         if (orden_.size() != tamano()) return false;
         std::vector<bool> visto(tamano(), false);
         for (std::size_t i = 0; i < orden_.size(); ++i) {
-            if (orden_[i] >= tamano() || visto[orden_[i]]) return false;
-            visto[orden_[i]] = true;
-            if (i > 0 && !a_.antes(orden_[i - 1], orden_[i])) return false;
+            const Clave& c = orden_[i];
+            if (c.slot >= tamano() || visto[c.slot]) return false;
+            visto[c.slot] = true;
+            if (c.puntos != a_.puntos[c.slot]) return false;
+            if (i > 0 && !a_.antes_clave(orden_[i - 1], c)) return false;
         }
         return true;
     }
     std::size_t bytes_estructura() const {
-        return sizeof(*this) + a_.bytes() + orden_.capacity() * sizeof(std::size_t);
+        return sizeof(*this) + a_.bytes() + orden_.capacity() * sizeof(Clave);
     }
 };
 
