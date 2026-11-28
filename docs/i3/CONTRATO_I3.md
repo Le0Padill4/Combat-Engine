@@ -125,8 +125,9 @@ casi no hay anulaciones (el punto de equilibrio baja como ~1/N).
   tamaños de id o distribuciones podrían mover los puntos de cruce.
 - Los bytes son una **estimación estructural**, no memoria residente: excluyen buffers de strings largos y
   metadatos del asignador.
-- Las pruebas no cubren concurrencia, la integración real con `Combate` (I2) ni con `RegistroPersonajes` (I1),
-  ni compilación con MSVC en local (la cubre el CI propuesto).
+- Las pruebas versionadas no cubren concurrencia ni la integración real con `Combate` (I2) o `RegistroPersonajes` (I1)
+  (solo un combate simulado). La integración real se probó una vez en una copia desechable de la rama
+  `codex/prueba-registro-combate` (ver `ESTADO_I3.md`); tampoco cubren la compilación con MSVC en local (la cubre el CI propuesto).
 - La comparación diferencial valida equivalencia con la referencia lenta, no que las reglas de puntaje sean las
   correctas para el juego: esas reglas son una propuesta.
 
