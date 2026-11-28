@@ -1,0 +1,27 @@
+name: I3 ranking and history tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - 'feat/i3-*'
+      - 'fix/i3-*'
+
+permissions:
+  contents: read
+
+jobs:
+  i3-ranking-historial:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure isolated I3 tests
+        run: cmake -S tests/i3 -B build/i3-ci -DCMAKE_BUILD_TYPE=Release
+      - name: Build isolated I3 tests
+        run: cmake --build build/i3-ci --config Release
+      - name: Run isolated I3 tests
+        run: ctest --test-dir build/i3-ci -C Release --output-on-failure
