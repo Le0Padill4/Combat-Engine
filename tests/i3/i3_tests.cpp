@@ -3,6 +3,7 @@
 // contra la referencia lenta de motor_lento.h.
 
 #include "generador.h"
+#include "i3/adaptador_combate.h"
 #include "i3/historial.h"
 #include "i3/motor_resultados.h"
 #include "i3/ranking.h"
@@ -639,6 +640,59 @@ const Escenario kEscenarios[] = {
     {"consulta-pesada", {80, {10, 30, 5, 25, 15, 10, 5}}, 100, 6, 10000},
 };
 
+
+// Combate simulado con la misma interfaz que Combate (I2): no depende de I2.
+struct PersonajeFalso { bool vivo = true; };
+struct CombateFalso {
+    PersonajeFalso* a;
+    PersonajeFalso* b;
+    unsigned long turnos = 0;
+    bool terminado() const { return !a->vivo || !b->vivo; }
+    const PersonajeFalso* ganador() const {
+        if (a->vivo == b->vivo) return nullptr;
+        return a->vivo ? a : b;
+    }
+    unsigned long turnosEjecutados() const { return turnos; }
+};
+
+void pruebas_adaptador() {
+    PersonajeFalso a, b, otro;
+    CombateFalso c{&a, &b, 7};
+    // No terminado: nada que registrar (ganador() tambien es nullptr aqui).
+    CHECK(!resultado_desde_combate(c, a, b, "goku", "vegeta").has_value());
+    b.vivo = false;
+    auto r = resultado_desde_combate(c, a, b, "goku", "vegeta", 42);
+    CHECK(r.has_value());
+    CHECK(r->id_ganador == "goku" && r->id_a == "goku" && r->id_b == "vegeta");
+    CHECK(r->turnos == 7 && r->id_externo == 42);
+    a.vivo = true; b.vivo = true; a.vivo = false;
+    r = resultado_desde_combate(c, a, b, "goku", "vegeta");
+    CHECK(r.has_value() && r->id_ganador == "vegeta");
+    b.vivo = false;  // ambos caidos: empate
+    r = resultado_desde_combate(c, a, b, "goku", "vegeta");
+    CHECK(r.has_value() && r->id_ganador.empty());
+    // Ganador que no es ninguno de los dos: el motor lo rechaza.
+    struct Raro : CombateFalso {
+        PersonajeFalso* x;
+        const PersonajeFalso* ganador() const { return x; }
+    } raro{{&a, &b, 1}, &otro};
+    r = resultado_desde_combate(raro, a, b, "goku", "vegeta");
+    using M = MotorResultados<RankingAVL, HistorialCircular>;
+    M m(8);
+    m.registrar_luchador("goku");
+    m.registrar_luchador("vegeta");
+    CHECK(r.has_value() && m.registrar_resultado(*r).estado == EstadoRegistro::ganador_invalido);
+    // Flujo completo con idempotencia.
+    a.vivo = true; b.vivo = false;
+    r = resultado_desde_combate(c, a, b, "goku", "vegeta", 9);
+    const auto p1 = m.registrar_resultado(*r);
+    const auto p2 = m.registrar_resultado(*r);
+    CHECK(p1.estado == EstadoRegistro::registrado);
+    CHECK(p2.estado == EstadoRegistro::duplicado && p2.id_combate == p1.id_combate);
+    CHECK(m.estadisticas("goku")->victorias == 1);
+    CHECK(m.verificar_invariantes());
+}
+
 template <typename R, typename H, typename I = IndiceStd>
 void correr_combinacion(const char* nombre) {
     std::cout << "  diferencial " << nombre << "\n";
@@ -663,6 +717,9 @@ int main() {
     std::cout << "== Candidatos de historial ==\n";
     pruebas_historial<HistorialCircular>("Circular");
     pruebas_historial<HistorialLista>("Lista");
+
+    std::cout << "== Adaptador de combate ==\n";
+    pruebas_adaptador();
 
     std::cout << "== Motor completo y comparacion con la referencia lenta ==\n";
     correr_combinacion<RankingAVL, HistorialCircular>("AVL+Circular");
