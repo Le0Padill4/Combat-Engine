@@ -9,7 +9,11 @@
 //   registrar_resultado(r)   comprueba en este orden: ids_iguales, id_desconocido
 //                            (cualquiera de los dos), ganador_invalido (no vacio y
 //                            distinto de a y b), turnos_invalidos (0 o mayor que
-//                            kMaxTurnosPorCombate). Si falla, NO cambia nada.
+//                            kMaxTurnosPorCombate), y por ultimo la idempotencia: con
+//                            id_externo != 0, si la clave ya esta registrada devuelve
+//                            `duplicado` (mismo contenido; id_combate original) o
+//                            `conflicto_clave` (contenido distinto). Si falla, NO cambia
+//                            nada. Anular un resultado libera su clave.
 //   anular_resultado(id)     false si el id no esta en la ventana del historial;
 //                            si esta, revierte estadisticas y ranking.
 //   top_k(k)                 k=0 o motor vacio -> vacio; k > n -> n entradas.
@@ -27,6 +31,7 @@
 #include <cstdint>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace combat::i3 {
@@ -40,6 +45,13 @@ class MotorResultados {
     Historial historial_;
     std::vector<Estadisticas> stats_;
     std::uint64_t siguiente_ = 1;
+    struct Registrado {
+        std::uint64_t id_combate;
+        ResultadoCombate resultado;
+    };
+    // Claves de idempotencia vigentes: crece con el numero de resultados con clave
+    // (no se acota con la ventana del historial; el costo es O(resultados con clave)).
+    std::unordered_map<std::uint64_t, Registrado> claves_;
 
     void aplicar(std::size_t slot, Papel papel, std::uint64_t turnos, bool sumar) {
         Estadisticas& s = stats_[slot];
@@ -94,17 +106,30 @@ public:
             return {EstadoRegistro::ganador_invalido, 0};
         if (r.turnos == 0 || r.turnos > kMaxTurnosPorCombate)
             return {EstadoRegistro::turnos_invalidos, 0};
+        if (r.id_externo != 0) {
+            const auto previo = claves_.find(r.id_externo);
+            if (previo != claves_.end()) {
+                if (previo->second.resultado == r)
+                    return {EstadoRegistro::duplicado, previo->second.id_combate};
+                return {EstadoRegistro::conflicto_clave, 0};
+            }
+        }
         const std::size_t sa = *pa;
         const std::size_t sb = *pb;
         aplicar_resultado(r, sa, sb, true);
         const std::uint64_t id = siguiente_++;
         historial_.registrar(EventoCombate{id, r});
+        if (r.id_externo != 0) claves_.emplace(r.id_externo, Registrado{id, r});
         return {EstadoRegistro::registrado, id};
     }
 
     bool anular_resultado(std::uint64_t id_combate) {
         const std::optional<EventoCombate> ev = historial_.anular(id_combate);
         if (!ev) return false;
+        if (ev->resultado.id_externo != 0) {
+            const auto it = claves_.find(ev->resultado.id_externo);
+            if (it != claves_.end() && it->second.id_combate == ev->id_combate) claves_.erase(it);
+        }
         const std::size_t* pa = indice_.buscar(ev->resultado.id_a);
         const std::size_t* pb = indice_.buscar(ev->resultado.id_b);
         if (pa == nullptr || pb == nullptr) return true;  // inalcanzable: ids ya validados
@@ -140,6 +165,19 @@ public:
                                     static_cast<Puntos>(e.derrotas) * kPuntosDerrota;
             if (e.puntos != esperado || ranking_.puntos(s) != e.puntos) return false;
         }
+        // Cada resultado de la ventana con clave debe tener su clave vigente, y toda
+        // clave debe apuntar a un combate ya asignado y con el mismo contenido.
+        for (const auto& e : historial_.ultimos(historial_.tamano())) {
+            if (e.resultado.id_externo == 0) continue;
+            const auto it = claves_.find(e.resultado.id_externo);
+            if (it == claves_.end() || it->second.id_combate != e.id_combate ||
+                !(it->second.resultado == e.resultado))
+                return false;
+        }
+        for (const auto& kv : claves_)
+            if (kv.first == 0 || kv.second.id_combate == 0 || kv.second.id_combate >= siguiente_ ||
+                kv.second.resultado.id_externo != kv.first)
+                return false;
         const auto todos = ranking_.top_k(stats_.size());
         if (todos.size() != stats_.size()) return false;
         for (std::size_t i = 0; i < todos.size(); ++i) {

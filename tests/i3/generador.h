@@ -54,6 +54,8 @@ inline std::string id_luchador(std::uint64_t i) {
 // Contexto compartido: ids de combate que la referencia acepto (candidatos a anular).
 struct ContextoGen {
     std::vector<std::uint64_t> combates_aceptados;
+    std::vector<ResultadoCombate> resultados_aceptados;  // para reenviar duplicados/conflictos
+    std::uint64_t ultima_clave = 0;
     std::size_t luchadores_registrados = 0;
 };
 
@@ -100,6 +102,18 @@ inline Op siguiente_op(Generador& g, const PerfilEscenario& p, const ContextoGen
             else if (t < 6) op.res.turnos = kMaxTurnosPorCombate + 1;
             else if (t < 8) op.res.turnos = kMaxTurnosPorCombate;
             else op.res.turnos = g.entero(1, 60);
+            // Clave de idempotencia: sin clave, clave nueva, o reutilizada.
+            {
+                const auto c = g.entero(0, 99);
+                if (c < 45) op.res.id_externo = 0;
+                else if (c < 92 || ctx.ultima_clave == 0) op.res.id_externo = ctx.ultima_clave + 1;
+                else op.res.id_externo = g.entero(1, ctx.ultima_clave);
+            }
+            // Reenvios: identico (duplicado) o con la misma clave pero otro contenido (conflicto).
+            if (!ctx.resultados_aceptados.empty() && g.prob(14)) {
+                op.res = ctx.resultados_aceptados[g.entero(0, ctx.resultados_aceptados.size() - 1)];
+                if (g.prob(30)) op.res.turnos = op.res.turnos % kMaxTurnosPorCombate + 1;
+            }
             break;
         }
         case TipoOp::anular:

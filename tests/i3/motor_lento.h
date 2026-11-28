@@ -23,6 +23,12 @@ class MotorLento {
     };
     std::vector<Luchador> luchadores_;
     std::vector<EventoCombate> historial_;  // del mas antiguo al mas reciente
+    struct ClaveVigente {
+        std::uint64_t ext;
+        std::uint64_t id_combate;
+        ResultadoCombate resultado;
+    };
+    std::vector<ClaveVigente> claves_;  // busqueda lineal
     std::size_t capacidad_;
     std::uint64_t siguiente_ = 1;
 
@@ -82,10 +88,21 @@ public:
             return {EstadoRegistro::ganador_invalido, 0};
         if (r.turnos == 0 || r.turnos > kMaxTurnosPorCombate)
             return {EstadoRegistro::turnos_invalidos, 0};
+        if (r.id_externo != 0) {
+            for (const auto& c : claves_) {
+                if (c.ext != r.id_externo) continue;
+                const bool igual = c.resultado.id_a == r.id_a && c.resultado.id_b == r.id_b &&
+                                   c.resultado.id_ganador == r.id_ganador &&
+                                   c.resultado.turnos == r.turnos;
+                if (igual) return {EstadoRegistro::duplicado, c.id_combate};
+                return {EstadoRegistro::conflicto_clave, 0};
+            }
+        }
         aplicar_resultado(r, +1);
         const std::uint64_t id = siguiente_++;
         historial_.push_back(EventoCombate{id, r});
         if (historial_.size() > capacidad_) historial_.erase(historial_.begin());
+        if (r.id_externo != 0) claves_.push_back({r.id_externo, id, r});
         return {EstadoRegistro::registrado, id};
     }
 
@@ -95,6 +112,12 @@ public:
                 const ResultadoCombate r = historial_[i].resultado;
                 historial_.erase(historial_.begin() + static_cast<std::ptrdiff_t>(i));
                 aplicar_resultado(r, -1);
+                for (std::size_t k = 0; k < claves_.size(); ++k) {
+                    if (claves_[k].ext == r.id_externo && claves_[k].id_combate == id) {
+                        claves_.erase(claves_.begin() + static_cast<std::ptrdiff_t>(k));
+                        break;
+                    }
+                }
                 return true;
             }
         }

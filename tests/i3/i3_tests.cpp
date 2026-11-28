@@ -329,7 +329,8 @@ std::string firma_estado(const M& m, std::size_t pool, std::size_t cap) {
     s += "|";
     for (const auto& e : m.ultimos(cap + 1))
         s += std::to_string(e.id_combate) + "," + e.resultado.id_a + "," + e.resultado.id_b + "," +
-             e.resultado.id_ganador + "," + std::to_string(e.resultado.turnos) + ";";
+             e.resultado.id_ganador + "," + std::to_string(e.resultado.turnos) + "," +
+             std::to_string(e.resultado.id_externo) + ";";
     return s;
 }
 
@@ -430,6 +431,56 @@ void casos_borde_motor(const char* nombre) {
         CHECK(m.estadisticas("B")->turnos_totales == 4ULL * kMaxTurnosPorCombate);
         CHECK(m.verificar_invariantes());
     }
+    {   // Idempotencia: la clave externa evita contar dos veces el mismo combate
+        M m(5);
+        for (const char* id : {"A", "B", "C"}) CHECK(m.registrar_luchador(id));
+        ResultadoCombate r = res("A", "B", "A", 7);
+        r.id_externo = 42;
+        const auto primero = m.registrar_resultado(r);
+        CHECK(primero.estado == EstadoRegistro::registrado && primero.id_combate == 1);
+        const std::string tras_primero = firma_estado(m, 0, 5);
+        const auto repetido = m.registrar_resultado(r);  // mismo contenido
+        CHECK(repetido.estado == EstadoRegistro::duplicado && repetido.id_combate == 1);
+        CHECK(firma_estado(m, 0, 5) == tras_primero);    // no se conto dos veces
+        ResultadoCombate otro = r;
+        otro.turnos = 8;                                  // misma clave, otro contenido
+        CHECK(m.registrar_resultado(otro).estado == EstadoRegistro::conflicto_clave);
+        otro = r;
+        otro.id_ganador = "B";
+        CHECK(m.registrar_resultado(otro).estado == EstadoRegistro::conflicto_clave);
+        CHECK(firma_estado(m, 0, 5) == tras_primero);
+        // Los datos invalidos se rechazan como invalidos aunque la clave exista.
+        ResultadoCombate malo = r;
+        malo.turnos = 0;
+        CHECK(m.registrar_resultado(malo).estado == EstadoRegistro::turnos_invalidos);
+        // Clave 0 = sin clave: no hay idempotencia y cada registro cuenta.
+        ResultadoCombate sin = res("A", "C", "C", 3);
+        CHECK(m.registrar_resultado(sin).estado == EstadoRegistro::registrado);
+        CHECK(m.registrar_resultado(sin).estado == EstadoRegistro::registrado);
+        CHECK(m.estadisticas("C")->victorias == 2);
+        // Anular libera la clave: se puede registrar una correccion con la misma clave.
+        CHECK(m.anular_resultado(1));
+        ResultadoCombate corregido = res("A", "B", "B", 7);
+        corregido.id_externo = 42;
+        const auto nuevo = m.registrar_resultado(corregido);
+        CHECK(nuevo.estado == EstadoRegistro::registrado && nuevo.id_combate == 4);
+        CHECK(m.estadisticas("B")->victorias == 1 && m.estadisticas("A")->victorias == 0);
+        CHECK(m.registrar_resultado(corregido).estado == EstadoRegistro::duplicado);
+        CHECK(m.verificar_invariantes());
+    }
+    {   // Un resultado fuera de la ventana sigue siendo duplicado (la clave no se expulsa)
+        M m(1);
+        CHECK(m.registrar_luchador("A") && m.registrar_luchador("B"));
+        ResultadoCombate r1 = res("A", "B", "A", 2);
+        r1.id_externo = 7;
+        CHECK(m.registrar_resultado(r1).estado == EstadoRegistro::registrado);
+        CHECK(m.registrar_resultado(res("A", "B", "B", 2)).estado == EstadoRegistro::registrado);  // expulsa r1
+        CHECK(m.ultimos(5).size() == 1);
+        CHECK(m.registrar_resultado(r1).estado == EstadoRegistro::duplicado);
+        CHECK(!m.anular_resultado(1));  // fuera de ventana: no se puede anular
+        CHECK(m.estadisticas("A")->combates == 2);
+        CHECK(m.verificar_invariantes());
+    }
     {   // Ids reales del juego (con caracteres no ASCII), todos contra todos
         M m(20);
         const char* ids[] = {"Sexitar", "Fran\xC3\xA7ois", "Leo1", "Leo2"};
@@ -458,6 +509,8 @@ const char* nombre_estado(EstadoRegistro e) {
         case EstadoRegistro::id_desconocido: return "id_desconocido";
         case EstadoRegistro::ganador_invalido: return "ganador_invalido";
         case EstadoRegistro::turnos_invalidos: return "turnos_invalidos";
+        case EstadoRegistro::duplicado: return "duplicado";
+        case EstadoRegistro::conflicto_clave: return "conflicto_clave";
     }
     return "?";
 }
@@ -518,7 +571,8 @@ Salida ejecutar(M& m, const Op& op) {
             for (const auto& e : u)
                 s.firma += std::to_string(e.id_combate) + "," + e.resultado.id_a + "," +
                            e.resultado.id_b + "," + e.resultado.id_ganador + "," +
-                           std::to_string(e.resultado.turnos) + ";";
+                           std::to_string(e.resultado.turnos) + "," +
+                           std::to_string(e.resultado.id_externo) + ";";
             s.categoria = u.empty() ? "ultimos/vacio" : "ultimos/datos";
             break;
         }
@@ -556,7 +610,12 @@ void diferencial(const char* combo, const Escenario& e, bool invariantes_siempre
             ++g_fallos;
             break;
         }
-        if (b.id_aceptado != 0) ctx.combates_aceptados.push_back(b.id_aceptado);
+        if (op.tipo == TipoOp::resultado && op.res.id_externo > ctx.ultima_clave)
+            ctx.ultima_clave = op.res.id_externo;
+        if (b.id_aceptado != 0) {
+            ctx.combates_aceptados.push_back(b.id_aceptado);
+            ctx.resultados_aceptados.push_back(op.res);
+        }
         if (b.luchador_ok) ++ctx.luchadores_registrados;
         if (invariantes_siempre || i % 97 == 0) {
             CHECK(rapido.verificar_invariantes());
@@ -621,7 +680,8 @@ int main() {
 
     // La comparacion no puede ser vacua: cada categoria relevante debe aparecer.
     for (const char* c : {"resultado/registrado", "resultado/id_desconocido", "resultado/ids_iguales",
-                          "resultado/ganador_invalido", "resultado/turnos_invalidos", "anular/ok",
+                          "resultado/ganador_invalido", "resultado/turnos_invalidos", "resultado/duplicado",
+                          "resultado/conflicto_clave", "anular/ok",
                           "anular/falso", "luchador/rechazado", "top_k/datos", "top_k/vacio",
                           "posicion/ausente", "posicion/presente", "estadisticas/ausente",
                           "ultimos/datos"})

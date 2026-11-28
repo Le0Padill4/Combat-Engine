@@ -24,6 +24,10 @@ struct ResultadoCombate {
     std::string id_b;
     std::string id_ganador;
     std::uint64_t turnos = 0;
+    // Clave de idempotencia que asigna quien emite el resultado (p. ej. el
+    // controlador del combate). 0 = sin clave: cada registro cuenta como nuevo.
+    // Con clave != 0, reenviar el mismo resultado no se cuenta dos veces.
+    std::uint64_t id_externo = 0;
 };
 
 struct EventoCombate {
@@ -51,12 +55,16 @@ enum class EstadoRegistro {
     ids_iguales,
     id_desconocido,
     ganador_invalido,
-    turnos_invalidos
+    turnos_invalidos,
+    duplicado,        // misma clave y mismo contenido: no cambia nada
+    conflicto_clave   // misma clave con contenido distinto: no cambia nada
 };
 
 struct RespuestaRegistro {
     EstadoRegistro estado;
-    std::uint64_t id_combate;  // 0 si no se registro
+    // id del combate registrado; en `duplicado`, el id del registro original;
+    // 0 en cualquier otro rechazo.
+    std::uint64_t id_combate;
 };
 
 // Orden total del ranking: mas puntos primero; empate de puntos -> id menor.
@@ -67,8 +75,8 @@ inline bool antes_en_ranking(Puntos p1, const std::string& id1, Puntos p2,
 }
 
 inline bool operator==(const ResultadoCombate& a, const ResultadoCombate& b) {
-    return std::tie(a.id_a, a.id_b, a.id_ganador, a.turnos) ==
-           std::tie(b.id_a, b.id_b, b.id_ganador, b.turnos);
+    return std::tie(a.id_a, a.id_b, a.id_ganador, a.turnos, a.id_externo) ==
+           std::tie(b.id_a, b.id_b, b.id_ganador, b.turnos, b.id_externo);
 }
 inline bool operator==(const EventoCombate& a, const EventoCombate& b) {
     return a.id_combate == b.id_combate && a.resultado == b.resultado;

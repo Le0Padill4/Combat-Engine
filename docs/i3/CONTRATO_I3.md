@@ -5,11 +5,17 @@ Código: `src/headers/i3/`. Pruebas y referencia lenta: `tests/i3/`. Mediciones:
 
 ## 1. Evento mínimo que I3 necesita de un combate
 
-`ResultadoCombate { id_a, id_b, id_ganador, turnos }`
+`ResultadoCombate { id_a, id_b, id_ganador, turnos, id_externo }`
 
 - `id_a`, `id_b`: ids de `PerfilPersonaje` (I1), tipo `std::string`.
 - `id_ganador`: uno de los dos ids; **vacío = empate**.
 - `turnos`: número de turnos ejecutados, entre 1 y 1.000.000.000.
+- `id_externo`: **clave de idempotencia** que asigna quien emite el resultado (p. ej. el controlador del
+  combate). 0 = sin clave (cada registro cuenta como nuevo). Con clave ≠ 0, el mismo combate no se cuenta dos
+  veces: un reenvío idéntico devuelve `duplicado` (con el `id_combate` original) y no cambia nada; la misma
+  clave con contenido distinto devuelve `conflicto_clave` y no cambia nada. Anular un resultado libera su
+  clave, de modo que una corrección puede registrarse con la misma clave. Esto cubre el "procesamiento
+  idempotente del evento de fin" que `docs/estado/integracion_registro_combate.md` deja como pendiente.
 
 Mapeo previsto desde I2 (a confirmar): `turnos = Combate::turnosEjecutados()`, `id_ganador` desde
 `Combate::ganador()`. `ganador() == nullptr` ocurre **también con el combate sin terminar**, así que el
@@ -24,7 +30,7 @@ puntaje, id menor (orden de bytes de `std::string`).
 | Operación | Entrada | Devuelve | Cambia | Casos borde |
 |---|---|---|---|---|
 | `registrar_luchador(id)` | id | `bool` | alta con 0 puntos | id vacío o repetido → `false`, sin cambios |
-| `registrar_resultado(r)` | `ResultadoCombate` | `{estado, id_combate}` | estadísticas de ambos, ranking, historial | se valida en este orden: `ids_iguales`, `id_desconocido` (cualquiera de los dos), `ganador_invalido` (no vacío y distinto de a y b), `turnos_invalidos` (0 o > 10⁹). Si falla **no cambia nada** y `id_combate = 0` |
+| `registrar_resultado(r)` | `ResultadoCombate` | `{estado, id_combate}` | estadísticas de ambos, ranking, historial | se valida en este orden: `ids_iguales`, `id_desconocido` (cualquiera de los dos), `ganador_invalido` (no vacío y distinto de a y b), `turnos_invalidos` (0 o > 10⁹) y, por último, la idempotencia (`duplicado`, `conflicto_clave`). Si falla **no cambia nada**; `id_combate = 0`, salvo en `duplicado` (id original) |
 | `anular_resultado(id_combate)` | id | `bool` | revierte estadísticas y ranking | fuera de la ventana (inexistente, ya anulado o expulsado) → `false`, sin cambios |
 | `top_k(k)` | k | `vector<EntradaRanking>` | — | k = 0 o motor vacío → vacío; k > n → n entradas |
 | `posicion(id)` | id | `optional<size_t>` (1 = primero) | — | id inexistente → `nullopt` |
@@ -33,6 +39,9 @@ puntaje, id menor (orden de bytes de `std::string`).
 
 Constructor: capacidad de historial 0 lanza `std::invalid_argument`. Los `id_combate` son crecientes y
 los asigna el motor, empezando en 1. Anular un combate no reutiliza su id.
+Las claves de idempotencia no se acotan con la ventana del historial: un resultado ya expulsado de la ventana
+sigue contando como `duplicado` si se reenvía, aunque ya no se pueda anular. Su costo de espacio es O(resultados
+con clave).
 Límite de 10⁹ turnos por combate: evita desbordes en `turnos_totales` (uint64) y permite revertir con exactitud.
 
 ## 3. Operaciones que cuentan (propuesta de I3) y candidatos
@@ -129,9 +138,10 @@ casi no hay anulaciones (el punto de equilibrio baja como ~1/N).
   (copia temporal de `hash_table.h` del PR #9, no incluida en el repositorio): 460.000 operaciones, 0 fallos.
 - Compilación sin avisos con `-Wall -Wextra -Wpedantic -Werror` (GCC y clang, además `-Wconversion`
   `-Wshadow`), con ASan/UBSan y con `-D_GLIBCXX_DEBUG`.
-- Comprobación de la potencia de las pruebas: se introdujeron 6 errores deliberados en copias del código
+- Comprobación de la potencia de las pruebas: se introdujeron 9 errores deliberados en copias del código
   (balance del AVL, desplazamiento del arreglo, índice de la lista, reversión de puntos, avance del buffer,
-  desempate del heap) y la suite detectó los 6. Esas copias no forman parte del repositorio.
+  desempate del heap, conflicto tratado como duplicado, anulación sin liberar la clave y clave sin guardar) y la
+  suite detectó los 9. Esas copias no forman parte del repositorio.
 - Pendiente: ejecución del CI remoto (Ubuntu, macOS, Windows/MSVC), que aún no se ha disparado.
 
 ## 9. Reproducir
